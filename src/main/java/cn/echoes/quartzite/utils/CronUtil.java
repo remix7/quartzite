@@ -65,11 +65,11 @@ public class CronUtil {
      */
     public static String getCronByDate(Date date) {
         String[] fileds = df.format(date).split("-");
-        return fileds[5] + " " + fileds[4] + " " + fileds[3] + " " + fileds[2] + " " + fileds[1] + " ? " + fileds[0] + "-" + fileds[0];
+        return fileds[5] + " " + fileds[4] + " " + fileds[3] + " " + fileds[2] + " " + fileds[1] + " ? " + fileds[0];
     }
 
     public static void main(String[] args) {
-        System.out.println(getCronByDateStr("2017-12-12 04:04:40"));
+        System.out.println(getCronByDateStr("2017-12-22 04:04:40"));
     }
 
 }
