@@ -52,29 +52,33 @@ public class SchedulerManager {
 
     /**
      * 恢复任务调度中的任务
+     *
      * @param jobBean 任务实体
      */
-    public static void resumeJob(JobBean jobBean){
-        resumeJob(jobBean.getJobName(),jobBean.getJobGroupName());
+    public static void resumeJob(JobBean jobBean) {
+        resumeJob(jobBean.getJobName(), jobBean.getJobGroupName());
     }
+
     /**
      * 恢复任务调度中的任务
+     *
      * @param jobName
      */
-    public static void resumeJob(String jobName){
-       resumeJob(jobName,JOB_GROUP_NAME);
+    public static void resumeJob(String jobName) {
+        resumeJob(jobName, JOB_GROUP_NAME);
     }
 
     /**
      * 恢复任务调度中的任务  使用默认组名
-     * @param jobName 任务名称
+     *
+     * @param jobName      任务名称
      * @param jobGroupName 组名称
      */
-    public static void resumeJob(String jobName,String jobGroupName){
+    public static void resumeJob(String jobName, String jobGroupName) {
         try {
             sched = schedulerFactory.getScheduler();
-            JobKey jobKey = JobKey.jobKey(jobName,jobGroupName);
-            if(null == jobKey){
+            JobKey jobKey = JobKey.jobKey(jobName, jobGroupName);
+            if (null == jobKey) {
                 return;
             }
             sched.resumeJob(jobKey);
@@ -175,23 +179,45 @@ public class SchedulerManager {
     }
 
     /**
-     * 移除一个任务 使用默认任务组名  触发器 触发器组名
+     * 移除一个任务
      *
-     * @param jobName 任务名
+     * @param triggerName      触发器名
+     * @param triggerGroupName 触发器组名
      */
-    public static void removeJob(String jobName) {
+    public static void removeJob(String jobName, String jobGroupName, String triggerName, String triggerGroupName) {
         try {
             sched = schedulerFactory.getScheduler();
             //停止触发器
-            sched.pauseTrigger(TriggerKey.triggerKey(jobName, TRIGGER_GROUP_NAME));
+            sched.pauseTrigger(TriggerKey.triggerKey(triggerName, triggerGroupName));
             //移除触发器
-            sched.unscheduleJob(TriggerKey.triggerKey(jobName, TRIGGER_GROUP_NAME));
+            sched.unscheduleJob(TriggerKey.triggerKey(triggerName, triggerGroupName));
             //删除任务
-            sched.deleteJob(JobKey.jobKey(jobName, JOB_GROUP_NAME));
+            sched.deleteJob(JobKey.jobKey(jobName, jobGroupName));
             LOG.debug("----------[REMOVE JOB SUCCESS]----------");
         } catch (SchedulerException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 删除一个任务
+     *
+     * @param jobName 任务名称 使用默认任务组名  触发器 触发器组名
+     */
+    public static void removeJob(String jobName) {
+        removeJob(jobName, JOB_GROUP_NAME, jobName, TRIGGER_GROUP_NAME);
+    }
+
+    /**
+     * 删除一个任务
+     *
+     * @param jobBean 任务实体
+     */
+    public static void removejob(JobBean jobBean) {
+        removeJob(jobBean.getJobName(),
+                jobBean.getJobGroupName(),
+                jobBean.getTriggerName(),
+                jobBean.getTriggerGroupName());
     }
 
     /**
@@ -238,7 +264,6 @@ public class SchedulerManager {
     public static void addJob(String jobName, String cron, Class<? extends Job> clazz) {
         addJob(jobName, JOB_GROUP_NAME, jobName, TRIGGER_GROUP_NAME, cron, clazz);
     }
-
 
     /**
      * 根据任务实体添加任务
