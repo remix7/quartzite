@@ -1,6 +1,5 @@
 package cn.echoes.quartzite;
 
-import org.quartz.Job;
 
 /**
  * -------------------------------------
@@ -8,5 +7,5 @@ import org.quartz.Job;
  * -------------------------------------
  * Created by liutao on 2017/4/15 下午1:52.
  */
-public interface SimpleJob extends Job {
+public interface SimpleJob {
 }

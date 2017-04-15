@@ -1,5 +1,6 @@
 package cn.echoes.quartzite;
 
+import cn.echoes.quartzite.entity.JobBean;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
  */
 public class SchedulerManager {
     private static SchedulerFactory schedulerFactory = new StdSchedulerFactory();
+    private static Scheduler sched;
     private static final String JOB_GROUP_NAME = "SIMPLE_JOB_GROUP";
     private static final String TRIGGER_GROUP_NAME = "SIMPLE_TRIGGER_GROUP";
     private static final Logger LOG = LoggerFactory.getLogger(SchedulerManager.class);
@@ -24,7 +26,7 @@ public class SchedulerManager {
      */
     public static void shutdownJob() {
         try {
-            Scheduler sched = schedulerFactory.getScheduler();
+            sched = schedulerFactory.getScheduler();
             if (!sched.isShutdown()) {
                 sched.shutdown();
                 LOG.debug("----------[SHOW DOWN ALL JOB SUCCESS]----------");
@@ -38,7 +40,7 @@ public class SchedulerManager {
      * 启动所有定时任务
      */
     public static void startJob() {
-        Scheduler sched = null;
+        sched = null;
         try {
             sched = schedulerFactory.getScheduler();
             sched.start();
@@ -46,6 +48,76 @@ public class SchedulerManager {
         } catch (SchedulerException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 恢复任务调度中的任务
+     * @param jobBean 任务实体
+     */
+    public static void resumeJob(JobBean jobBean){
+        resumeJob(jobBean.getJobName(),jobBean.getJobGroupName());
+    }
+    /**
+     * 恢复任务调度中的任务
+     * @param jobName
+     */
+    public static void resumeJob(String jobName){
+       resumeJob(jobName,JOB_GROUP_NAME);
+    }
+
+    /**
+     * 恢复任务调度中的任务  使用默认组名
+     * @param jobName 任务名称
+     * @param jobGroupName 组名称
+     */
+    public static void resumeJob(String jobName,String jobGroupName){
+        try {
+            sched = schedulerFactory.getScheduler();
+            JobKey jobKey = JobKey.jobKey(jobName,jobGroupName);
+            if(null == jobKey){
+                return;
+            }
+            sched.resumeJob(jobKey);
+        } catch (SchedulerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 暂停一个任务 使用默认的job group
+     *
+     * @param jobName job名称
+     */
+    public static void pauseJob(String jobName) {
+        pauseJob(jobName, JOB_GROUP_NAME);
+    }
+
+    /**
+     * 暂停一个任务
+     *
+     * @param jobName      job名称
+     * @param jobGroupName 任务组名
+     */
+    public static void pauseJob(String jobName, String jobGroupName) {
+        try {
+            sched = schedulerFactory.getScheduler();
+            JobKey jobKey = JobKey.jobKey(jobName, jobGroupName);
+            if (null == jobKey) {
+                return;
+            }
+            sched.pauseJob(jobKey);
+        } catch (SchedulerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 暂停一个任务
+     *
+     * @param jobBean 任务实体
+     */
+    public static void pauseJob(JobBean jobBean) {
+        pauseJob(jobBean.getJobName(), jobBean.getJobGroupName());
     }
 
     /**
@@ -58,7 +130,7 @@ public class SchedulerManager {
      */
     public static void modifyJonCron(String triggerName, String triggerGroupName, String newCron) {
         try {
-            Scheduler sched = schedulerFactory.getScheduler();
+            sched = schedulerFactory.getScheduler();
             CronTrigger trigger = (CronTrigger) sched.getTrigger(new TriggerKey(triggerName, triggerGroupName));
             if (trigger == null) {
                 return;
@@ -87,11 +159,11 @@ public class SchedulerManager {
      */
     public static void modifyJobCron(String jobName, String newCron) {
         try {
-            Scheduler sched = schedulerFactory.getScheduler();
+            sched = schedulerFactory.getScheduler();
             CronTrigger trigger = (CronTrigger) sched.getTrigger(new TriggerKey(jobName, TRIGGER_GROUP_NAME));
             String oldCron = trigger.getCronExpression();
             if (!oldCron.equals(newCron)) {
-                JobDetail detail = sched.getJobDetail(new JobKey(jobName, JOB_GROUP_NAME));
+                JobDetail detail = sched.getJobDetail(JobKey.jobKey(jobName, JOB_GROUP_NAME));
                 LOG.debug("----------[MODIFY JOB CRON SUCCESS]----------");
                 Class clazz = detail.getJobClass();
                 removeJob(jobName);
@@ -109,13 +181,13 @@ public class SchedulerManager {
      */
     public static void removeJob(String jobName) {
         try {
-            Scheduler sched = schedulerFactory.getScheduler();
+            sched = schedulerFactory.getScheduler();
             //停止触发器
-            sched.pauseTrigger(new TriggerKey(jobName, TRIGGER_GROUP_NAME));
+            sched.pauseTrigger(TriggerKey.triggerKey(jobName, TRIGGER_GROUP_NAME));
             //移除触发器
-            sched.unscheduleJob(new TriggerKey(jobName, TRIGGER_GROUP_NAME));
+            sched.unscheduleJob(TriggerKey.triggerKey(jobName, TRIGGER_GROUP_NAME));
             //删除任务
-            sched.deleteJob(new JobKey(jobName, JOB_GROUP_NAME));
+            sched.deleteJob(JobKey.jobKey(jobName, JOB_GROUP_NAME));
             LOG.debug("----------[REMOVE JOB SUCCESS]----------");
         } catch (SchedulerException e) {
             throw new RuntimeException(e);
@@ -135,7 +207,7 @@ public class SchedulerManager {
     public static void addJob(String jobName, String jobGroupName, String triggerName, String triggerGroupName, String cron, Class<? extends Job> clazz) {
         try {
 
-            Scheduler sched = schedulerFactory.getScheduler();
+            sched = schedulerFactory.getScheduler();
             JobDetail detail = JobBuilder
                     .newJob(clazz)
                     .withIdentity(jobName, jobGroupName)
@@ -164,31 +236,21 @@ public class SchedulerManager {
      * @param clazz   任务实体类  要实现job接口
      */
     public static void addJob(String jobName, String cron, Class<? extends Job> clazz) {
-
-        try {
-            //获取任务调度实体
-            Scheduler sched = schedulerFactory.getScheduler();
-            //绑定任务描述
-            JobDetail detail = JobBuilder
-                    .newJob(clazz)
-                    .withIdentity(jobName, JOB_GROUP_NAME)
-                    .build();
-            //绑定触发器
-            CronTrigger trigger = TriggerBuilder.newTrigger()
-                    .withIdentity(jobName, TRIGGER_GROUP_NAME)
-                    .withSchedule(CronScheduleBuilder.cronSchedule(cron))
-                    .build();
-            //绑定调度任务
-            sched.scheduleJob(detail, trigger);
-            LOG.debug("----------[ADD JOB SUCCESS CRON IS :" + cron + "]----------");
-            //如果任务不是关闭状态就将任务开启
-            if (!sched.isShutdown()) {
-                LOG.debug("----------[START JOB SUCCESS JOB NAME IS :" + jobName + "]----------");
-                sched.start();
-            }
-        } catch (SchedulerException e) {
-            throw new RuntimeException(e);
-        }
+        addJob(jobName, JOB_GROUP_NAME, jobName, TRIGGER_GROUP_NAME, cron, clazz);
     }
 
+
+    /**
+     * 根据任务实体添加任务
+     *
+     * @param jobBean
+     */
+    public static void addJob(JobBean jobBean) {
+        addJob(jobBean.getJobName(),
+                jobBean.getJobGroupName(),
+                jobBean.getTriggerName(),
+                jobBean.getTriggerGroupName(),
+                jobBean.getCronExpression(),
+                jobBean.getJobClazz());
+    }
 }
