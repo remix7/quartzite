@@ -13,7 +13,7 @@
         </filter>
 
         <!-- Set Sentry DSN -->
-        <dsn>***</dsn>
+        <dsn>https://41e5ce3960e64faba6181c02790f93d5:92525f54258943f6ae38a1935c14b9f7@sentry.io/158594</dsn>
 
         <!-- Optional, provide release version of your application -->
         <release>1.0.0</release>
