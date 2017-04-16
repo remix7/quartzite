@@ -132,7 +132,7 @@ public class SchedulerManager {
      * @param triggerGroupName 触发器组名
      * @param newCron          新的cron表达式
      */
-    public static void modifyJonCron(String triggerName, String triggerGroupName, String newCron) {
+    public static void modifyJobCron(String triggerName, String triggerGroupName, String newCron) {
         try {
             sched = schedulerFactory.getScheduler();
             CronTrigger trigger = (CronTrigger) sched.getTrigger(new TriggerKey(triggerName, triggerGroupName));
